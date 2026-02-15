@@ -1,0 +1,24 @@
+{
+  "short_name": "KasirWA",
+  "name": "Kasir & Stok UMKM Pro (WA Enabled)",
+  "description": "Aplikasi Kasir Offline dengan Fitur Kirim Nota WhatsApp",
+  "icons": [
+    {
+      "src": "icon-192x192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512x512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "./index.html",
+  "background_color": "#F8F9FA",
+  "theme_color": "#064E3B",
+  "display": "standalone",
+  "scope": "./",
+  "orientation": "portrait"
+}
