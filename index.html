@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Kasir UMKM Pro</title>
+    <link rel="manifest" href="manifest.json">
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        [x-cloak] { display: none !important; }
+        body { background-color: #F8F9FA; -webkit-tap-highlight-color: transparent; }
+        .emerald-deep { background: #064E3B; }
+        .btn-action { transition: all 0.2s; border-radius: 1.25rem; }
+        .btn-action:active { transform: scale(0.95); }
+    </style>
+</head>
+<body x-data="app()" x-init="loadData()" class="antialiased text-gray-800">
+
+    <header class="emerald-deep text-white px-6 py-8 rounded-b-[3rem] shadow-xl sticky top-0 z-50">
+        <div class="flex justify-between items-center text-center">
+            <div class="text-left">
+                <h1 class="text-xl font-black tracking-tighter">TOKOPINTAR</h1>
+                <p class="text-[10px] opacity-70 uppercase tracking-widest font-bold">Stok & Kasir Offline</p>
+            </div>
+            <div class="flex gap-2">
+                <button @click="tab = 'kasir'" :class="tab === 'kasir' ? 'bg-white text-emerald-900' : 'bg-white/20'" class="px-4 py-2 rounded-xl text-xs font-bold transition-all">JUAL</button>
+                <button @click="tab = 'stok'" :class="tab === 'stok' ? 'bg-white text-emerald-900' : 'bg-white/20'" class="px-4 py-2 rounded-xl text-xs font-bold transition-all">STOK</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="p-4 pb-40">
+        <div x-show="tab === 'kasir'" x-transition x-cloak>
+            <div class="grid grid-cols-2 gap-4">
+                <template x-for="item in inventory" :key="item.id">
+                    <button @click="addToCart(item)" 
+                            :disabled="item.stok <= 0"
+                            class="bg-white p-5 rounded-[2.5rem] shadow-sm border border-gray-100 flex flex-col items-center relative btn-action"
+                            :class="item.stok <= 0 ? 'opacity-40 grayscale' : ''">
+                        <div class="absolute top-3 right-4 bg-emerald-50 text-emerald-700 text-[10px] px-2 py-0.5 rounded-full font-bold" x-text="'Stok: ' + item.stok"></div>
+                        <span class="text-4xl my-3" x-text="item.icon"></span>
+                        <span class="font-bold text-sm mb-1" x-text="item.nama"></span>
+                        <span class="text-emerald-700 font-black text-sm" x-text="formatIDR(item.harga)"></span>
+                    </button>
+                </template>
+            </div>
+        </div>
+
+        <div x-show="tab === 'stok'" x-transition x-cloak class="space-y-4">
+            <h2 class="text-lg font-bold px-2">Update Stok Barang</h2>
+            <template x-for="(item, index) in inventory" :key="item.id">
+                <div class="bg-white p-4 rounded-3xl shadow-sm border border-gray-50 flex justify-between items-center">
+                    <div class="flex items-center gap-4">
+                        <span class="text-3xl" x-text="item.icon"></span>
+                        <div>
+                            <p class="font-bold text-gray-800" x-text="item.nama"></p>
+                            <p class="text-xs text-gray-400 font-medium" x-text="formatIDR(item.harga)"></p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 bg-gray-50 p-1.5 rounded-2xl">
+                        <button @click="updateStock(index, -1)" class="w-10 h-10 bg-white shadow-sm rounded-xl text-red-500 font-bold">-</button>
+                        <span class="w-6 text-center font-black text-lg" x-text="item.stok"></span>
+                        <button @click="updateStock(index, 1)" class="w-10 h-10 bg-white shadow-sm rounded-xl text-emerald-600 font-bold">+</button>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </main>
+
+    <div x-show="cart.length > 0 && tab === 'kasir'" 
+         x-transition:enter="transition ease-out duration-300 transform translate-y-full"
+         x-transition:enter-end="translate-y-0"
+         class="fixed bottom-0 inset-x-0 p-6 bg-white rounded-t-[3rem] shadow-[0_-20px_50px_rgba(0,0,0,0.1)] z-50">
+        
+        <div class="flex justify-between items-end mb-6">
+            <div>
+                <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Total Belanja</p>
+                <h2 class="text-3xl font-black text-emerald-900" x-text="formatIDR(totalPrice())"></h2>
+            </div>
+            <button @click="cart = []" class="text-red-500 text-xs font-bold bg-red-50 px-3 py-2 rounded-lg">Batal</button>
+        </div>
+
+        <button @click="checkout()" class="w-full emerald-deep py-5 rounded-[1.5rem] text-white font-black text-lg shadow-xl btn-action flex justify-center items-center gap-2">
+            <span>PROSES & KIRIM NOTA</span>
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path></svg>
+        </button>
+    </div>
+
+    <script>
+        function app() {
+            return {
+                tab: 'kasir',
+                cart: [],
+                inventory: [
+                    { id: 1, nama: 'Beras 1kg', harga: 15000, stok: 10, icon: '🌾' },
+                    { id: 2, nama: 'Gula 1kg', harga: 14000, stok: 20, icon: '🍬' },
+                    { id: 3, nama: 'Minyak 1L', harga: 18000, stok: 5, icon: '🧪' },
+                    { id: 4, nama: 'Telur Ayam', harga: 2000, stok: 50, icon: '🥚' }
+                ],
+                loadData() {
+                    const saved = localStorage.getItem('umkm_data');
+                    if (saved) this.inventory = JSON.parse(saved);
+                },
+                saveData() {
+                    localStorage.setItem('umkm_data', JSON.stringify(this.inventory));
+                },
+                addToCart(item) {
+                    const i = this.inventory.find(x => x.id === item.id);
+                    if (i.stok > 0) {
+                        this.cart.push({...item});
+                        i.stok--;
+                        if (navigator.vibrate) navigator.vibrate(40);
+                    }
+                },
+                updateStock(idx, val) {
+                    this.inventory[idx].stok = Math.max(0, this.inventory[idx].stok + val);
+                    this.saveData();
+                },
+                totalPrice() {
+                    return this.cart.reduce((s, i) => s + i.harga, 0);
+                },
+                formatIDR(n) {
+                    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n);
+                },
+                checkout() {
+                    const total = this.totalPrice();
+                    let msg = `*NOTA BELANJA - TOKO BERKAH*\n---------------------------\n`;
+                    
+                    // Grouping items for cleaner text
+                    const counts = {};
+                    this.cart.forEach(x => counts[x.nama] = (counts[x.nama] || 0) + 1);
+                    
+                    Object.keys(counts).forEach(name => {
+                        const item = this.cart.find(x => x.nama === name);
+                        msg += `${name} (x${counts[name]}) : ${this.formatIDR(item.harga * counts[name])}\n`;
+                    });
+
+                    msg += `---------------------------\n*TOTAL: ${this.formatIDR(total)}*\n\nTerima kasih sudah belanja!`;
+                    
+                    // Kirim ke WhatsApp
+                    const waUrl = `https://wa.me/?text=${encodeURIComponent(msg)}`;
+                    window.open(waUrl, '_blank');
+                    
+                    this.saveData();
+                    this.cart = [];
+                }
+            }
+        }
+
+        // Register Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js');
+        }
+    </script>
+</body>
+</html>
